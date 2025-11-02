@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/camoufox"
+
+if ARGV.empty?
+  warn "Usage: camoufox <command> [args]"
+  exit 1
+end
+
+command = ARGV.shift
+
+begin
+  output = Camoufox::CLI.run(command, ARGV)
+  print(output) unless output.nil? || output.empty?
+rescue Camoufox::MissingNativeExtension => e
+  warn e.message
+  exit 127
+end
