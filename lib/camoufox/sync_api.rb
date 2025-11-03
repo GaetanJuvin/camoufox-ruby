@@ -33,16 +33,18 @@ module Camoufox
     end
 
     class Page
-      attr_reader :title
+      attr_reader :title, :content
 
       def initialize(launch_options)
         @launch_options = launch_options
         @title = nil
+        @content = nil
       end
 
       def goto(url)
         result = NodeRunner.visit(@launch_options, url)
         @title = result['title']
+        @content = result['content']&.to_s
         self
       end
     end
