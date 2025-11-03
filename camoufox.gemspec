@@ -29,6 +29,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.extensions = ["ext/camoufox_native/extconf.rb"]
 
+  spec.add_dependency "base64", "~> 0.3"
+
   spec.add_development_dependency "rspec", "~> 3.12"
   spec.add_development_dependency "rubocop", "~> 1.60"
   spec.add_development_dependency "rake-compiler", "~> 1.2"

@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     camoufox (0.1.0)
+      base64 (~> 0.3)
 
 GEM
   remote: https://rubygems.org/
@@ -59,7 +60,6 @@ PLATFORMS
   x86_64-darwin-24
 
 DEPENDENCIES
-  base64
   camoufox!
   rake-compiler (~> 1.2)
   rspec (~> 3.12)
