@@ -14,7 +14,7 @@ all logic inside the Ruby gem.
 Add the gem directly from the repository while the native rewrite is underway:
 
 ```ruby
-gem "camoufox", github: "daijro/camoufox-ruby"
+gem "camoufox"
 ```
 
 ### Prerequisites
