@@ -9,6 +9,14 @@ RSpec.describe Camoufox::NativeBridge do
       expect(options).to include(:executable_path)
       expect(options[:env]).to be_a(Hash)
     end
+
+    it "respects the headless option" do
+      headless_options = described_class.launch_options(headless: true)
+      headful_options = described_class.launch_options(headless: false)
+
+      expect(headless_options[:headless]).to eq(true)
+      expect(headful_options[:headless]).to eq(false)
+    end
   end
 
   describe ".run_cli" do

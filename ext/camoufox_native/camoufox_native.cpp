@@ -16,7 +16,17 @@ VALUE build_stub_launch_options(VALUE rb_options) {
   rb_hash_aset(env, rb_str_new_cstr("CAMOU_CONFIG_1"), rb_str_new_cstr("{}"));
   rb_hash_aset(result, ID2SYM(rb_intern("env")), env);
 
-  rb_hash_aset(result, ID2SYM(rb_intern("headless")), Qfalse);
+  ID headless_id = rb_intern("headless");
+  VALUE headless_key = ID2SYM(headless_id);
+  VALUE headless_value = rb_hash_lookup(rb_options, headless_key);
+
+  if (NIL_P(headless_value)) {
+    headless_value = Qfalse;
+  } else {
+    headless_value = RTEST(headless_value) ? Qtrue : Qfalse;
+  }
+
+  rb_hash_aset(result, headless_key, headless_value);
 
   return result;
 }
