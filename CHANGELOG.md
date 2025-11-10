@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+- Improve Playwright bridge: unwrap driver bundles that only expose `createPlaywright`/`default`
+  exports so `Camoufox::SyncAPI` can always reach `playwright.firefox`.
+
 ## 0.2.0
 - Fix native launch options so the provided `headless` flag is respected by Playwright.
 
