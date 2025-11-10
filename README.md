@@ -48,13 +48,19 @@ end
 Camoufox::SyncAPI::Camoufox.open(headless: true) do |browser|
   page = browser.new_page
   page.goto("https://example.com")
+  page.wait_for_selector('h1')
   puts page.title
+  puts page.content.include?('Example Domain')
 end
 ```
 
 Behind the scenes the Ruby port encodes the Camoufox launch options, hands them to a small Node.js
 bridge, and lets Playwright do the heavy lifting. You must supply a Playwright driver bundle or
 installation so the Node script can `require('playwright')`.
+
+The synchronous helper keeps a Firefox page alive for the lifetime of the Ruby object, so follow-up
+calls like `wait_for_selector`, `content`, or `title` reuse the same DOM state without re-launching
+the browser for every method.
 
 ### Launching the Playwright server (experimental)
 
@@ -138,6 +144,7 @@ Environment overrides:
 
 - `CAMOUFOX_DATA_DIR` – override where Camoufox assets are stored (planned use)
 - `CAMOUFOX_CACHE_DIR` – override the cache directory (planned use)
+- `CAMOUFOX_EXECUTABLE_PATH` – path to the Camoufox Firefox binary returned by the native stub (defaults to `File.join(Camoufox::Pkgman.install_dir, "camoufox")`, but override it if you place the browser elsewhere)
 - `CAMOUFOX_NODE_PATH` – path to the Node.js binary used when spawning the Playwright server (defaults to `node`)
 - `CAMOUFOX_PLAYWRIGHT_DRIVER_DIR` – directory containing `lib/browserServerImpl.js` (defaults to `node_modules/playwright` if present)
 - `CAMOUFOX_PLAYWRIGHT_JS_REQUIRE` – optional module identifier passed to Node's `require()` when

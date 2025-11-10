@@ -1,13 +1,61 @@
 #include <ruby.h>
 #include <cstring>
+#include <cstdlib>
 
 namespace {
 
+VALUE pkgman_default_executable() {
+  ID camoufox_id = rb_intern("Camoufox");
+  if (!rb_const_defined(rb_cObject, camoufox_id)) {
+    return Qnil;
+  }
+
+  VALUE camoufox_module = rb_const_get(rb_cObject, camoufox_id);
+  ID pkgman_id = rb_intern("Pkgman");
+  if (!rb_const_defined(camoufox_module, pkgman_id)) {
+    return Qnil;
+  }
+
+  VALUE pkgman_module = rb_const_get(camoufox_module, pkgman_id);
+  VALUE install_dir = rb_funcall(pkgman_module, rb_intern("install_dir"), 0);
+  if (NIL_P(install_dir)) {
+    return Qnil;
+  }
+
+  VALUE file_class = rb_const_get(rb_cObject, rb_intern("File"));
+  VALUE executable_name = rb_str_new_cstr("camoufox");
+  return rb_funcall(file_class, rb_intern("join"), 2, install_dir, executable_name);
+}
+
+VALUE fetch_executable_path(VALUE rb_options) {
+  ID executable_id = rb_intern("executable_path");
+  VALUE executable_key = ID2SYM(executable_id);
+  VALUE explicit_value = rb_hash_lookup(rb_options, executable_key);
+
+  if (!NIL_P(explicit_value)) {
+    return explicit_value;
+  }
+
+  const char* env_value = std::getenv("CAMOUFOX_EXECUTABLE_PATH");
+  if (env_value && env_value[0] != '\0') {
+    return rb_str_new_cstr(env_value);
+  }
+
+  VALUE pkgman_path = pkgman_default_executable();
+  if (!NIL_P(pkgman_path)) {
+    return pkgman_path;
+  }
+
+  return Qnil;
+}
+
 VALUE build_stub_launch_options(VALUE rb_options) {
+  Check_Type(rb_options, T_HASH);
   VALUE result = rb_hash_new();
 
-  VALUE executable_path = rb_str_new_cstr("/usr/local/bin/camoufox");
-  rb_hash_aset(result, ID2SYM(rb_intern("executable_path")), executable_path);
+  VALUE executable_key = ID2SYM(rb_intern("executable_path"));
+  VALUE executable_path = fetch_executable_path(rb_options);
+  rb_hash_aset(result, executable_key, executable_path);
 
   VALUE args = rb_ary_new();
   rb_hash_aset(result, ID2SYM(rb_intern("args")), args);
