@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 - Add `user_data_dir` support to the synchronous Playwright bridge so Firefox can reuse persistent
   profiles via `launchPersistentContext`.
 
