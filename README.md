@@ -62,6 +62,23 @@ The synchronous helper keeps a Firefox page alive for the lifetime of the Ruby o
 calls like `wait_for_selector`, `content`, or `title` reuse the same DOM state without re-launching
 the browser for every method.
 
+### Reusing Firefox profiles
+
+Playwright's `launchPersistentContext` API can now be toggled by passing a `user_data_dir` when
+opening a Camoufox session. The directory stores cookies, history, and other profile data between
+runs, mirroring how Playwright persists Chromium profiles:
+
+```ruby
+Camoufox::SyncAPI::Camoufox.open(headless: false, user_data_dir: "/tmp/camoufox-profile") do |browser|
+  page = browser.new_page
+  page.goto("https://example.com")
+  puts page.title
+end
+```
+
+When `user_data_dir` is provided the Node bridge launches Firefox through
+`browserType.launchPersistentContext`, so every browser command reuses the same profile directory.
+
 ### Launching the Playwright server (experimental)
 
 To mirror the Python helper that spins up a Playwright websocket endpoint, the Ruby port can invoke

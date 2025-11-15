@@ -76,6 +76,13 @@ VALUE build_stub_launch_options(VALUE rb_options) {
 
   rb_hash_aset(result, headless_key, headless_value);
 
+  ID user_data_dir_id = rb_intern("user_data_dir");
+  VALUE user_data_dir_key = ID2SYM(user_data_dir_id);
+  VALUE user_data_dir_value = rb_hash_lookup(rb_options, user_data_dir_key);
+  if (!NIL_P(user_data_dir_value)) {
+    rb_hash_aset(result, user_data_dir_key, user_data_dir_value);
+  }
+
   return result;
 }
 

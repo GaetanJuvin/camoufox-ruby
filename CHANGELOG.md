@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Add `user_data_dir` support to the synchronous Playwright bridge so Firefox can reuse persistent
+  profiles via `launchPersistentContext`.
+
 ## 0.4.2
 - Default the native stub's `executable_path` to `File.join(Camoufox::Pkgman.install_dir, "camoufox")`
   while still honoring kwargs or `CAMOUFOX_EXECUTABLE_PATH`, so Playwright can launch whichever

@@ -50,6 +50,11 @@ RSpec.describe Camoufox::NativeBridge do
       options = described_class.launch_options
       expect(options[:executable_path]).to eq(pkgman_path)
     end
+
+    it "passes through the user_data_dir option so Playwright can launch persistent contexts" do
+      options = described_class.launch_options(user_data_dir: "/tmp/camoufox-profile")
+      expect(options[:user_data_dir]).to eq("/tmp/camoufox-profile")
+    end
   end
 
   describe ".run_cli" do

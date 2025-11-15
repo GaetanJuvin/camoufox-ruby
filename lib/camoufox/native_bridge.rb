@@ -15,7 +15,12 @@ module Camoufox
 
     def launch_options(**kwargs)
       ensure_loaded!
-      CamoufoxNative.launch_options(kwargs)
+      options = CamoufoxNative.launch_options(kwargs)
+      if kwargs.key?(:user_data_dir)
+        options = options.dup
+        options[:user_data_dir] = kwargs[:user_data_dir]
+      end
+      options
     end
 
     def run_cli(command, args = [])
