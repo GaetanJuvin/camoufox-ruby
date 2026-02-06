@@ -3,21 +3,31 @@ PATH
   specs:
     camoufox (0.5.0)
       base64 (~> 0.3)
+      mcp (~> 0.6)
 
 GEM
   remote: https://rubygems.org/
   specs:
+    addressable (2.8.8)
+      public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
     base64 (0.3.0)
+    bigdecimal (4.0.1)
     diff-lcs (1.6.2)
     json (2.15.1)
+    json-schema (6.1.0)
+      addressable (~> 2.8)
+      bigdecimal (>= 3.1, < 5)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
+    mcp (0.6.0)
+      json-schema (>= 4.1)
     parallel (1.27.0)
     parser (3.3.9.0)
       ast (~> 2.4.1)
       racc
     prism (1.6.0)
+    public_suffix (7.0.2)
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.3.1)
@@ -57,6 +67,7 @@ GEM
     unicode-emoji (4.1.0)
 
 PLATFORMS
+  arm64-darwin-24
   x86_64-darwin-24
 
 DEPENDENCIES

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+export PATH="/Users/gaetanjuvin/.rbenv/shims:/Users/gaetanjuvin/.rbenv/bin:$PATH"
+cd /Users/gaetanjuvin/Project/camoufox-ruby
+exec bundle exec ruby bin/camoufox-mcp

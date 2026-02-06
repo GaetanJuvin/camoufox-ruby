@@ -89,6 +89,23 @@ module Camoufox
         end
       end
 
+      def screenshot(full_page: false)
+        ensure_open!
+        result = @session.request('screenshot', 'fullPage' => full_page)
+        result['data']
+      end
+
+      def evaluate(expression, *args)
+        ensure_open!
+        expression_source = expression.to_s
+        raise ArgumentError, "expression must be provided" if expression_source.strip.empty?
+
+        params = { 'expression' => expression_source }
+        params['args'] = args unless args.empty?
+        result = @session.request('evaluate', params)
+        result['value']
+      end
+
       def close
         return if closed?
 
@@ -107,6 +124,7 @@ module Camoufox
       def ensure_open!
         raise Camoufox::Error, "Page is closed" if closed?
       end
+
     end
 
     module NodeRunner

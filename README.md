@@ -60,7 +60,14 @@ installation so the Node script can `require('playwright')`.
 
 The synchronous helper keeps a Firefox page alive for the lifetime of the Ruby object, so follow-up
 calls like `wait_for_selector`, `content`, or `title` reuse the same DOM state without re-launching
-the browser for every method.
+the browser for every method. You can also run arbitrary JavaScript in that page via
+`page.evaluate`:
+
+```ruby
+page.evaluate("() => ({ href: window.location.href, title: document.title })")
+# Variadic arguments are supported – the function receives them individually.
+page.evaluate("(a, b) => `${a} + ${b}`", "1", "2")
+```
 
 ### Reusing Firefox profiles
 

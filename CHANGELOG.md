@@ -3,6 +3,8 @@
 ## 0.5.0
 - Add `user_data_dir` support to the synchronous Playwright bridge so Firefox can reuse persistent
   profiles via `launchPersistentContext`.
+- Add `Camoufox::SyncAPI::Page#evaluate`, wired through the Node bridge, so scripts can run
+  JavaScript inside the live Firefox page (now with variadic argument support).
 
 ## 0.4.2
 - Default the native stub's `executable_path` to `File.join(Camoufox::Pkgman.install_dir, "camoufox")`

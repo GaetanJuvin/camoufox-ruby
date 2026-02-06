@@ -68,4 +68,37 @@ RSpec.describe Camoufox::SyncAPI::Page do
   ensure
     page.close
   end
+
+  it "evaluates javascript via the Node session" do
+    allow(session).to receive(:request).with('evaluate', hash_including('expression' => '() => 2 + 2')).and_return({ 'value' => 4 })
+
+    page = described_class.new({})
+    expect(page.evaluate('() => 2 + 2')).to eq(4)
+  ensure
+    page.close
+  end
+
+  it "supports multiple arguments when evaluating functions" do
+    allow(session).to receive(:request).and_return({ 'value' => 42 })
+
+    page = described_class.new({})
+    page.evaluate('(a, b, c) => a + b + c', 12, 20, 10)
+
+    expect(session).to have_received(:request).with(
+      'evaluate',
+      hash_including(
+        'expression' => a_string_including('__camoufoxArgs'),
+        'arg' => [12, 20, 10],
+      ),
+    )
+  ensure
+    page.close
+  end
+
+  it "requires an expression when evaluating" do
+    page = described_class.new({})
+    expect { page.evaluate(nil) }.to raise_error(ArgumentError)
+  ensure
+    page.close
+  end
 end
