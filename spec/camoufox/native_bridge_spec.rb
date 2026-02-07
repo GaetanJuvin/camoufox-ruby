@@ -20,10 +20,16 @@ RSpec.describe Camoufox::NativeBridge do
   end
 
   describe ".launch_options" do
-    it "returns a stubbed hash" do
+    it "returns a stubbed hash with fingerprint config" do
       options = described_class.launch_options(headless: true)
       expect(options[:executable_path]).to eq(pkgman_path)
       expect(options[:env]).to be_a(Hash)
+
+      config_json = options[:env]["CAMOU_CONFIG_1"]
+      expect(config_json).to be_a(String)
+      config = JSON.parse(config_json)
+      expect(config).to be_a(Hash)
+      expect(config["navigator.userAgent"]).to match(/Firefox\/\d+\.0$/)
     end
 
     it "respects the headless option" do

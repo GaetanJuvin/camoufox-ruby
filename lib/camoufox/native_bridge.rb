@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 module Camoufox
   module NativeBridge
     module_function
@@ -20,6 +22,12 @@ module Camoufox
         options = options.dup
         options[:user_data_dir] = kwargs[:user_data_dir]
       end
+
+      # Generate fingerprint config and inject into env
+      config = Fingerprints.generate(kwargs)
+      config_json = JSON.generate(config)
+      options[:env] = (options[:env] || {}).merge("CAMOU_CONFIG_1" => config_json)
+
       options
     end
 
