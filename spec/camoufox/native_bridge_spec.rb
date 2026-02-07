@@ -3,7 +3,7 @@
 require "spec_helper"
 
 RSpec.describe Camoufox::NativeBridge do
-  let(:pkgman_path) { File.join(Camoufox::Pkgman.install_dir, "camoufox") }
+  let(:pkgman_path) { Camoufox::Pkgman.executable_path }
   let(:env_key) { "CAMOUFOX_EXECUTABLE_PATH" }
 
   before do
@@ -46,7 +46,7 @@ RSpec.describe Camoufox::NativeBridge do
       expect(options[:executable_path]).to eq("/env/camoufox")
     end
 
-    it "uses Camoufox::Pkgman.install_dir/camoufox as the default" do
+    it "uses Camoufox::Pkgman.executable_path as the default" do
       options = described_class.launch_options
       expect(options[:executable_path]).to eq(pkgman_path)
     end
@@ -58,8 +58,8 @@ RSpec.describe Camoufox::NativeBridge do
   end
 
   describe ".run_cli" do
-    it "returns stub output for known commands" do
-      expect(described_class.run_cli(:version)).to include("Camoufox native stub")
+    it "returns output for known commands" do
+      expect(described_class.run_cli(:version)).to include("Camoufox")
     end
   end
 end

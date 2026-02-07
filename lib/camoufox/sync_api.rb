@@ -101,7 +101,10 @@ module Camoufox
         raise ArgumentError, "expression must be provided" if expression_source.strip.empty?
 
         params = { 'expression' => expression_source }
-        params['args'] = args unless args.empty?
+        unless args.empty?
+          params['expression'] = "(__camoufoxArgs) => (#{expression_source})(...__camoufoxArgs)"
+          params['arg'] = args
+        end
         result = @session.request('evaluate', params)
         result['value']
       end
@@ -169,6 +172,11 @@ module Camoufox
           node_path = ::Camoufox.configuration.node_path || 'node'
           script_path = File.expand_path('syncSession.js', __dir__)
           env = {}
+
+          # Extract :env from launch options BEFORE camelization to preserve
+          # uppercase env var names like CAMOU_CONFIG_1
+          camoufox_env = @launch_options.delete(:env) || {}
+          camoufox_env.each { |k, v| env[k.to_s] = v.to_s }
 
           if (driver_dir = ::Camoufox.configuration.playwright_driver_dir)
             env['NODE_PATH'] = [driver_dir, ENV['NODE_PATH']].compact.join(File::PATH_SEPARATOR)

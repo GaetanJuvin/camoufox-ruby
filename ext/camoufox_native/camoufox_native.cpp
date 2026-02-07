@@ -4,27 +4,28 @@
 
 namespace {
 
-VALUE pkgman_default_executable() {
+VALUE pkgman_module() {
   ID camoufox_id = rb_intern("Camoufox");
   if (!rb_const_defined(rb_cObject, camoufox_id)) {
     return Qnil;
   }
 
-  VALUE camoufox_module = rb_const_get(rb_cObject, camoufox_id);
+  VALUE camoufox_mod = rb_const_get(rb_cObject, camoufox_id);
   ID pkgman_id = rb_intern("Pkgman");
-  if (!rb_const_defined(camoufox_module, pkgman_id)) {
+  if (!rb_const_defined(camoufox_mod, pkgman_id)) {
     return Qnil;
   }
 
-  VALUE pkgman_module = rb_const_get(camoufox_module, pkgman_id);
-  VALUE install_dir = rb_funcall(pkgman_module, rb_intern("install_dir"), 0);
-  if (NIL_P(install_dir)) {
+  return rb_const_get(camoufox_mod, pkgman_id);
+}
+
+VALUE pkgman_default_executable() {
+  VALUE pkgman = pkgman_module();
+  if (NIL_P(pkgman)) {
     return Qnil;
   }
 
-  VALUE file_class = rb_const_get(rb_cObject, rb_intern("File"));
-  VALUE executable_name = rb_str_new_cstr("camoufox");
-  return rb_funcall(file_class, rb_intern("join"), 2, install_dir, executable_name);
+  return rb_funcall(pkgman, rb_intern("executable_path"), 0);
 }
 
 VALUE fetch_executable_path(VALUE rb_options) {
@@ -87,17 +88,44 @@ VALUE build_stub_launch_options(VALUE rb_options) {
 }
 
 VALUE build_cli_response(const char* command) {
+  VALUE pkgman = pkgman_module();
+
   if (strcmp(command, "path") == 0) {
-    return rb_str_new_cstr("/usr/local/share/camoufox\n");
+    if (!NIL_P(pkgman)) {
+      VALUE dir = rb_funcall(pkgman, rb_intern("install_dir"), 0);
+      if (!NIL_P(dir)) {
+        VALUE result = rb_str_dup(dir);
+        rb_str_cat_cstr(result, "\n");
+        return result;
+      }
+    }
+    return rb_str_new_cstr("(not configured)\n");
   }
   if (strcmp(command, "version") == 0) {
-    return rb_str_new_cstr("Camoufox native stub v0.0.1\n");
+    if (!NIL_P(pkgman)) {
+      VALUE ver = rb_funcall(pkgman, rb_intern("version_string"), 0);
+      if (!NIL_P(ver)) {
+        VALUE result = rb_str_new_cstr("Camoufox ");
+        rb_str_append(result, ver);
+        rb_str_cat_cstr(result, "\n");
+        return result;
+      }
+    }
+    return rb_str_new_cstr("Camoufox not installed\n");
   }
   if (strcmp(command, "fetch") == 0) {
-    return rb_str_new_cstr("Fetch command is not yet implemented in the native port.\n");
+    if (!NIL_P(pkgman)) {
+      rb_funcall(pkgman, rb_intern("install"), 0);
+      return rb_str_new_cstr("Fetch complete.\n");
+    }
+    return rb_str_new_cstr("Pkgman not available.\n");
   }
   if (strcmp(command, "remove") == 0) {
-    return rb_str_new_cstr("Remove command is not yet implemented in the native port.\n");
+    if (!NIL_P(pkgman)) {
+      rb_funcall(pkgman, rb_intern("remove"), 0);
+      return rb_str_new_cstr("Remove complete.\n");
+    }
+    return rb_str_new_cstr("Pkgman not available.\n");
   }
   return rb_str_new_cstr("Unknown command.\n");
 }
