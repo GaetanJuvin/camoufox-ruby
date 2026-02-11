@@ -285,7 +285,7 @@ module Camoufox
         # Headers
         "headers.User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:#{ff_version}.0) Gecko/20100101 Firefox/#{ff_version}.0",
         "headers.Accept-Language" => "#{language},#{language.split('-').first};q=0.9",
-        "headers.Accept-Encoding" => "gzip, deflate, br, zstd",
+        "headers.Accept-Encoding" => "gzip, deflate, br",
 
         # WebGL
         "webGl:vendor" => "Apple",
@@ -348,9 +348,5 @@ module Camoufox
       "135"
     end
 
-    def from_browserforge(_fingerprint, _ff_version)
-      warn("[camoufox] BrowserForge integration is not yet implemented")
-      {}
-    end
   end
 end
