@@ -15,4 +15,10 @@ module Camoufox
       @status = status
     end
   end
+
+  class AddonError < Error; end
+
+  class GeoIPError < Error; end
+
+  class InvalidConfig < Error; end
 end
