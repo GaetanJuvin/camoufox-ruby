@@ -265,7 +265,6 @@ module Camoufox
         # Headers
         "headers.User-Agent" => ua_string,
         "headers.Accept-Language" => "#{language},#{language.split('-').first};q=0.9",
-        "headers.Accept-Encoding" => "gzip, deflate, br",
 
         # WebGL
         "webGl:vendor" => gpu_info[:vendor],
