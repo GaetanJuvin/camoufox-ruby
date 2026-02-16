@@ -15,7 +15,8 @@ RSpec.describe Camoufox::Fingerprints do
     end
 
     it "includes navigator.platform" do
-      expect(config["navigator.platform"]).to eq("MacIntel")
+      expect(config["navigator.platform"]).to be_a(String)
+      expect(config["navigator.platform"]).not_to be_empty
     end
 
     it "includes navigator.hardwareConcurrency from valid set" do
@@ -24,7 +25,7 @@ RSpec.describe Camoufox::Fingerprints do
 
     it "has consistent screen dimensions" do
       expect(config["screen.availWidth"]).to eq(config["screen.width"])
-      expect(config["screen.availHeight"]).to be < config["screen.height"]
+      expect(config["screen.availHeight"]).to be <= config["screen.height"]
     end
 
     it "has window dimensions smaller than or equal to screen" do
@@ -40,7 +41,8 @@ RSpec.describe Camoufox::Fingerprints do
     end
 
     it "has a valid WebGL vendor and renderer" do
-      expect(config["webGl:vendor"]).to eq("Apple")
+      expect(config["webGl:vendor"]).to be_a(String)
+      expect(config["webGl:vendor"]).not_to be_empty
       expect(config["webGl:renderer"]).to be_a(String)
       expect(config["webGl:renderer"]).not_to be_empty
     end
@@ -91,8 +93,62 @@ RSpec.describe Camoufox::Fingerprints do
       expect(config["screen.colorDepth"]).to eq(config["screen.pixelDepth"])
     end
 
-    it "has devicePixelRatio as 1.0 or 2.0" do
-      expect([1.0, 2.0]).to include(config["window.devicePixelRatio"])
+    it "has devicePixelRatio as a valid value" do
+      expect([1.0, 1.25, 1.5, 2.0]).to include(config["window.devicePixelRatio"])
+    end
+  end
+
+  describe ".generate with os:" do
+    it "generates macOS fingerprints" do
+      config = described_class.generate(os: :macos)
+      expect(config["navigator.platform"]).to eq("MacIntel")
+      expect(config["navigator.userAgent"]).to include("Macintosh")
+      expect(config["webGl:vendor"]).to eq("Apple")
+    end
+
+    it "generates Windows fingerprints" do
+      config = described_class.generate(os: :windows)
+      expect(config["navigator.platform"]).to eq("Win32")
+      expect(config["navigator.userAgent"]).to include("Windows NT")
+      expect(config["webGl:vendor"]).to be_a(String)
+      expect(config["navigator.oscpu"]).to include("Windows")
+    end
+
+    it "generates Linux fingerprints" do
+      config = described_class.generate(os: :linux)
+      expect(config["navigator.platform"]).to eq("Linux x86_64")
+      expect(config["navigator.userAgent"]).to include("X11")
+      expect(config["navigator.oscpu"]).to eq("Linux x86_64")
+    end
+
+    it "uses OS-appropriate fonts" do
+      mac_config = described_class.generate(os: :macos)
+      win_config = described_class.generate(os: :windows)
+      lin_config = described_class.generate(os: :linux)
+
+      expect(mac_config["fonts"]).to include("Helvetica Neue")
+      expect(win_config["fonts"]).to include("Segoe UI")
+      expect(lin_config["fonts"]).to include("DejaVu Sans")
+    end
+  end
+
+  describe ".generate with screen constraints" do
+    it "filters screens by min_width" do
+      config = described_class.generate(screen: { min_width: 1600 })
+      expect(config["screen.width"]).to be >= 1600
+    end
+
+    it "filters screens by max_width" do
+      config = described_class.generate(screen: { max_width: 1440 })
+      expect(config["screen.width"]).to be <= 1440
+    end
+  end
+
+  describe ".generate with window dimensions" do
+    it "uses provided window dimensions" do
+      config = described_class.generate(window: [1024, 768])
+      expect(config["window.outerWidth"]).to eq(1024)
+      expect(config["window.outerHeight"]).to eq(768)
     end
   end
 
@@ -114,6 +170,30 @@ RSpec.describe Camoufox::Fingerprints do
     it "returns a version string" do
       version = described_class.firefox_version
       expect(version).to match(/\A\d+\z/)
+    end
+  end
+
+  describe ".detect_os" do
+    it "returns a symbol" do
+      expect(described_class.detect_os).to be_a(Symbol)
+      expect(%i[macos windows linux]).to include(described_class.detect_os)
+    end
+  end
+
+  describe ".fonts_for_os" do
+    it "returns macOS fonts" do
+      fonts = described_class.fonts_for_os(:macos)
+      expect(fonts).to include("Helvetica Neue")
+    end
+
+    it "returns Windows fonts" do
+      fonts = described_class.fonts_for_os(:windows)
+      expect(fonts).to include("Segoe UI")
+    end
+
+    it "returns Linux fonts" do
+      fonts = described_class.fonts_for_os(:linux)
+      expect(fonts).to include("DejaVu Sans")
     end
   end
 end
