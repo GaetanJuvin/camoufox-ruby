@@ -12,6 +12,7 @@ require_relative "camoufox/server"
 require_relative "camoufox/warnings"
 require_relative "camoufox/addons"
 require_relative "camoufox/ip"
+require_relative "camoufox/locale"
 require_relative "camoufox/native_bridge"
 require_relative "camoufox/__main__"
 
