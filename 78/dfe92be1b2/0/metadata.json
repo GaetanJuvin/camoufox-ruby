@@ -1,0 +1,53 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "78dfe92be1b2",
+  "session_id": "ee672412-b029-4ca0-b22f-7bbfa9a76cc4",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-16T19:40:21.290957Z",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    ".gitignore",
+    ".mcp.json",
+    "README.md",
+    "ext/camoufox_native/camoufox_native.cpp",
+    "lib/camoufox.rb",
+    "lib/camoufox/__version__.rb",
+    "lib/camoufox/addons.rb",
+    "lib/camoufox/config_validator.rb",
+    "lib/camoufox/exceptions.rb",
+    "lib/camoufox/fingerprints.rb",
+    "lib/camoufox/fonts.json",
+    "lib/camoufox/ip.rb",
+    "lib/camoufox/locale.rb",
+    "lib/camoufox/mcp/tools/launch.rb",
+    "lib/camoufox/native_bridge.rb",
+    "lib/camoufox/warnings.rb",
+    "spec/camoufox/addons_spec.rb",
+    "spec/camoufox/config_validator_spec.rb",
+    "spec/camoufox/fingerprints_spec.rb",
+    "spec/camoufox/ip_spec.rb",
+    "spec/camoufox/locale_spec.rb",
+    "spec/camoufox/native_bridge_spec.rb"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "7869a898-8626-407a-93e1-8b4a15a1e04b",
+  "checkpoint_transcript_start": 471,
+  "transcript_lines_at_start": 471,
+  "token_usage": {
+    "input_tokens": 98,
+    "cache_creation_tokens": 116904,
+    "cache_read_tokens": 6643485,
+    "output_tokens": 6463,
+    "api_call_count": 76
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-16T19:40:21.173864Z",
+    "agent_lines": 88,
+    "human_added": 0,
+    "human_modified": 1,
+    "human_removed": 8,
+    "total_committed": 89,
+    "agent_percentage": 98.87640449438202
+  }
+}

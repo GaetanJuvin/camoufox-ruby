@@ -1,0 +1,47 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "78dfe92be1b2",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    ".gitignore",
+    ".mcp.json",
+    "README.md",
+    "ext/camoufox_native/camoufox_native.cpp",
+    "lib/camoufox.rb",
+    "lib/camoufox/__version__.rb",
+    "lib/camoufox/addons.rb",
+    "lib/camoufox/config_validator.rb",
+    "lib/camoufox/exceptions.rb",
+    "lib/camoufox/fingerprints.rb",
+    "lib/camoufox/fonts.json",
+    "lib/camoufox/ip.rb",
+    "lib/camoufox/locale.rb",
+    "lib/camoufox/mcp/tools/launch.rb",
+    "lib/camoufox/native_bridge.rb",
+    "lib/camoufox/warnings.rb",
+    "spec/camoufox/addons_spec.rb",
+    "spec/camoufox/config_validator_spec.rb",
+    "spec/camoufox/fingerprints_spec.rb",
+    "spec/camoufox/ip_spec.rb",
+    "spec/camoufox/locale_spec.rb",
+    "spec/camoufox/native_bridge_spec.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/78/dfe92be1b2/0/metadata.json",
+      "transcript": "/78/dfe92be1b2/0/full.jsonl",
+      "context": "/78/dfe92be1b2/0/context.md",
+      "content_hash": "/78/dfe92be1b2/0/content_hash.txt",
+      "prompt": "/78/dfe92be1b2/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 98,
+    "cache_creation_tokens": 116904,
+    "cache_read_tokens": 6643485,
+    "output_tokens": 6463,
+    "api_call_count": 76
+  }
+}
