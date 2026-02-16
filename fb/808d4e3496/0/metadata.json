@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "fb808d4e3496",
+  "session_id": "ee672412-b029-4ca0-b22f-7bbfa9a76cc4",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-16T19:00:41.34807Z",
+  "branch": "main",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "ext/camoufox_native/camoufox_native.cpp",
+    "lib/camoufox/exceptions.rb",
+    "lib/camoufox/native_bridge.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 36,
+    "cache_creation_tokens": 42458,
+    "cache_read_tokens": 1732808,
+    "output_tokens": 2678,
+    "api_call_count": 32
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-16T19:00:41.31842Z",
+    "agent_lines": 0,
+    "human_added": 353,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 353,
+    "agent_percentage": 0
+  }
+}

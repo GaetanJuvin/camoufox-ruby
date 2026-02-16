@@ -1,0 +1,360 @@
+Implement the following plan:
+
+# Upgrade camoufox-ruby to Match Official Python Package
+
+## Context
+
+The Ruby gem (v0.5.0) is a functional but minimal port of the Python `camoufox` package. The official repo (`daijro/camoufox`) has shipped significant anti-detection features through releases beta.19-beta.24 (Dec 2024 - Mar 2025) and is developing Firefox 146 support. The Ruby gem is missing most of these features, and critically, while it generates fingerprint data, it lacks support for proxy, WebRTC protection, addon handling, Firefox prefs, config validation, and many launch options that the Python package exposes.
+
+**Goal:** Bring the Ruby gem's feature set in line with the Python package's `launch_options()` API surface, focusing on what flows through `CAMOU_CONFIG` env vars to the Camoufox browser binary.
+
+---
+
+## Phase 1: Refactor Launch Options Pipeline (Core)
+
+The C++ extension (`camoufox_native.cpp`) builds a stub hash that Ruby immediately overwrites. Move all logic to Ruby for maintainability.
+
+### 1.1 Simplify C++ to executable path resolution only
+
+**File:** `ext/camoufox_native/camoufox_native.cpp`
+- Keep only `fetch_executable_path()` (lines 31-51) exposed as `CamoufoxNative.executable_path(options)`
+- Keep `build_cli_response()` (lines 90-131) as-is
+- Remove `build_stub_launch_options()` (lines 53-88) — this duplicates work Ruby already does
+
+### 1.2 Rewrite `native_bridge.rb` as the central config builder
+
+**File:** `lib/camoufox/native_bridge.rb`
+
+Expand `launch_options` to accept the full Python parameter set:
+
+```ruby
+def launch_options(
+  config: {},              # Direct Camoufox config properties
+  proxy: nil,              # {server:, username:, password:, bypass:}
+  block_images: false,     # Block all images
+  block_webrtc: false,     # Disable WebRTC entirely
+  block_webgl: false,      # Disable WebGL
+  disable_coop: false,     # Disable Cross-Origin-Opener-Policy
+  geoip: nil,              # true (auto-detect) or IP string
+  locale: nil,             # "en-US" or ["en-US", "fr-FR"]
+  addons: [],              # Paths to extracted addon directories
+  fonts: nil,              # Additional font families
+  screen: nil,             # {min_width:, max_width:, ...}
+  window: nil,             # [width, height]
+  headless: false,
+  firefox_user_prefs: {},  # about:config preferences
+  enable_cache: false,
+  args: [],
+  env: {},
+  debug: false,
+  executable_path: nil,
+  user_data_dir: nil,
+  ff_version: nil,
+  os: nil,                 # :macos, :windows, :linux
+  **extra_launch_options
+)
+```
+
+Key responsibilities:
+1. Resolve `executable_path` (explicit > env var > Pkgman) — call into C++ helper or reimplement in Ruby
+2. Generate fingerprint config via `Fingerprints.generate(os:, screen:, window:, locale:, ff_version:)`
+3. Merge user `config` on top of generated fingerprint (user overrides win)
+4. Apply `block_*` flags as Firefox prefs
+5. Apply `enable_cache` prefs
+6. Apply `disable_coop` pref
+7. Handle `geoip` → resolve IP, set `webrtc:ipv4`/`webrtc:ipv6`, geolocation, timezone
+8. Handle `locale` → set `locale:language`, `locale:region`, `locale:all`
+9. Handle `addons` → validate paths, set `addons` in config
+10. Handle `fonts` → merge with OS defaults, set `fonts` in config
+11. Chunk config JSON into `CAMOU_CONFIG_N` env vars (32767 byte chunks)
+12. Build and return final options hash
+
+### 1.3 Add config chunking utility
+
+**File:** `lib/camoufox/native_bridge.rb` (private method)
+
+```ruby
+def chunk_config(config_hash)
+  json = JSON.generate(config_hash)
+  chunk_size = 32_767
+  chunks = {}
+  (0...json.bytesize).step(chunk_size).each_with_index do |offset, i|
+    chunks["CAMOU_CONFIG_#{i + 1}"] = json.byteslice(offset, chunk_size)
+  end
+  chunks
+end
+```
+
+### 1.4 Update `utils.rb`
+
+**File:** `lib/camoufox/utils.rb`
+- `Utils.launch_options` should pass through all kwargs to `NativeBridge.launch_options`
+
+---
+
+## Phase 2: Expand Launch Feature Support
+
+### 2.1 Proxy support
+
+**File:** `lib/camoufox/native_bridge.rb`
+
+When `proxy:` is provided:
+- Pass `proxy: {server:, username:, password:}` in the Playwright options (the Node.js bridge already forwards all options to `browserType.launch()`)
+- If `geoip` is also set, inject `webrtc:ipv4` into CAMOU_CONFIG
+
+### 2.2 Firefox user prefs
+
+**File:** `lib/camoufox/native_bridge.rb`
+
+Merge prefs from `firefox_user_prefs:`, `block_*` flags, `enable_cache`, and `disable_coop` into a single `firefoxUserPrefs` key in the Playwright options hash:
+
+```ruby
+prefs = firefox_user_prefs.dup
+prefs['media.peerconnection.enabled'] = false if block_webrtc
+prefs['webgl.disabled'] = true if block_webgl
+prefs['permissions.default.image'] = 2 if block_images
+prefs['browser.tabs.remote.useCrossOriginOpenerPolicy'] = false if disable_coop
+if enable_cache
+  prefs.merge!(CACHE_PREFS)
+end
+```
+
+### 2.3 WebRTC IP protection
+
+**File:** `lib/camoufox/native_bridge.rb`
+
+Two modes:
+- `block_webrtc: true` → set Firefox pref to disable (see 2.2)
+- `geoip:` with IP → inject `webrtc:ipv4` or `webrtc:ipv6` into config, disable IPv6 DNS if IPv4
+
+### 2.4 Canvas anti-fingerprinting (already implemented)
+
+Verify `canvas:aaOffset` and `canvas:aaCapOffset` in `fingerprints.rb` flow correctly through the config pipeline. Currently they do — no changes needed.
+
+---
+
+## Phase 3: OS-Aware Fingerprint Generation
+
+### 3.1 Add Windows and Linux fingerprint data
+
+**File:** `lib/camoufox/fingerprints.rb`
+
+Currently macOS-only. Add:
+- **Windows:** Intel/NVIDIA/AMD GPUs, Windows UA strings, `Win32`/`Win64` platform, Windows fonts
+- **Linux:** Mesa/Intel/NVIDIA GPUs, Linux UA strings, `Linux x86_64` platform, Linux fonts
+- **OS selection:** Accept `os:` param; default to host OS detection
+
+### 3.2 Port `fonts.json` from Python package
+
+**File:** `lib/camoufox/fonts.json`
+
+Replace the stub `{"stub": []}` with actual per-OS font lists from the Python package. Load in `fingerprints.rb`:
+
+```ruby
+FONT_DATA = JSON.parse(File.read(File.join(__dir__, "fonts.json")))
+```
+
+### 3.3 Screen/window constraints
+
+**File:** `lib/camoufox/fingerprints.rb`
+
+Accept `screen:` and `window:` params to filter `SCREENS` and derive window dimensions:
+
+```ruby
+def generate(os: nil, screen: nil, window: nil, locale: nil, **options)
+  screens = filter_screens(SCREENS, screen)
+  selected_screen = screens.sample
+  # ... derive window dimensions from screen if window not specified
+end
+```
+
+---
+
+## Phase 4: Addon Handling
+
+### 4.1 New file: `lib/camoufox/addons.rb`
+
+```ruby
+module Camoufox
+  module Addons
+    UBLOCK_URL = "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
+
+    module_function
+
+    def resolve(addon_paths, exclude: [])
+      paths = addon_paths.dup
+      # Add default addons (uBlock) unless excluded
+      paths += default_addon_paths(exclude)
+      # Validate each path has manifest.json
+      validate!(paths)
+      paths
+    end
+
+    def validate!(paths)
+      paths.each do |p|
+        raise AddonError, "Addon missing manifest.json: #{p}" unless File.exist?(File.join(p, "manifest.json"))
+      end
+    end
+  end
+end
+```
+
+Wire into `native_bridge.rb`: set `config["addons"] = resolved_paths` when addons are provided.
+
+---
+
+## Phase 5: GeoIP and Locale
+
+### 5.1 New file: `lib/camoufox/ip.rb`
+
+```ruby
+module Camoufox
+  module IP
+    IP_SERVICES = %w[
+      https://api.ipify.org
+      https://checkip.amazonaws.com
+      https://ipinfo.io/ip
+    ].freeze
+
+    module_function
+
+    def public_ip(proxy: nil)
+      # Try each service until one succeeds
+    end
+
+    def valid_ipv4?(ip); end
+    def valid_ipv6?(ip); end
+  end
+end
+```
+
+### 5.2 New file: `lib/camoufox/locale.rb`
+
+Simplified locale handling (without the full CLDR statistical selector — that can be added later):
+
+```ruby
+module Camoufox
+  module Locale
+    COUNTRY_LANGUAGE = { "US" => "en-US", "FR" => "fr-FR", ... }.freeze
+
+    module_function
+
+    def handle(locale_input, config)
+      # Parse locale string(s), set locale:language, locale:region, locale:all
+    end
+
+    def from_country(country_code)
+      COUNTRY_LANGUAGE.fetch(country_code, "en-US")
+    end
+  end
+end
+```
+
+### 5.3 Wire geoip into launch_options
+
+When `geoip: true` or `geoip: "1.2.3.4"`:
+1. Resolve IP (auto-detect or use provided)
+2. Use a free geo API (`ipapi.co`) to get country, lat/lon, timezone
+3. Inject `geolocation:latitude`, `geolocation:longitude`, `timezone`, locale into config
+4. Inject `webrtc:ipv4` / `webrtc:ipv6` for WebRTC protection
+
+---
+
+## Phase 6: Config Validation and Warnings
+
+### 6.1 New file: `lib/camoufox/config_validator.rb`
+
+Load `properties.json` from the Camoufox binary install directory and validate config keys:
+
+```ruby
+module Camoufox
+  module ConfigValidator
+    module_function
+
+    def validate!(config)
+      props = load_properties
+      return if props.empty?
+      unknown = config.keys - props.map { |p| p["property"] }
+      warn "Unknown config keys: #{unknown.join(', ')}" if unknown.any?
+    end
+  end
+end
+```
+
+### 6.2 Add leak warnings
+
+**File:** `lib/camoufox/warnings.rb`
+
+- Warn when proxy used without `geoip` (timezone/locale leak)
+- Warn in debug mode with full config dump
+
+### 6.3 New exceptions
+
+**File:** `lib/camoufox/exceptions.rb`
+
+Add: `AddonError`, `GeoIPError`, `InvalidConfig`
+
+---
+
+## Phase 7: Update MCP Tools and Sync API
+
+### 7.1 Update MCP launch tool
+
+**File:** `lib/camoufox/mcp/tools/launch.rb`
+
+Add input parameters: `proxy_server`, `block_images`, `block_webrtc`, `locale`, etc.
+
+### 7.2 Sync API stays thin
+
+**File:** `lib/camoufox/sync_api.rb`
+
+No structural changes needed — `SyncAPI::Camoufox.open(**kwargs)` already forwards all kwargs through `Utils.launch_options` to `NativeBridge.launch_options`. The expanded parameter set flows through automatically.
+
+---
+
+## Phase 8: Update `syncSession.js` Bridge
+
+### 8.1 Verify proxy passthrough
+
+**File:** `lib/camoufox/syncSession.js`
+
+Playwright's `browserType.launch(options)` already accepts `proxy` and `firefoxUserPrefs`. The Ruby side camelizes the hash before sending. Verify:
+- `proxy: {server: "..."}` → passes through correctly
+- `firefox_user_prefs: {...}` → camelizes to `firefoxUserPrefs` and is recognized by Playwright
+
+### 8.2 Add `addInitScript` for addon-related stealth (if needed)
+
+No changes expected — the existing stealth script is sufficient. Addon loading happens at the browser binary level via CAMOU_CONFIG.
+
+---
+
+## Files Summary
+
+| Action | File | Description |
+|--------|------|-------------|
+| Modify | `ext/camoufox_native/camoufox_native.cpp` | Simplify to executable path + CLI only |
+| Rewrite | `lib/camoufox/native_bridge.rb` | Full launch_options with all parameters |
+| Modify | `lib/camoufox/fingerprints.rb` | OS-aware generation, screen/window constraints |
+| Modify | `lib/camoufox/utils.rb` | Pass through all kwargs |
+| Replace | `lib/camoufox/fonts.json` | Real per-OS font data from Python package |
+| Modify | `lib/camoufox/exceptions.rb` | Add new exception classes |
+| Modify | `lib/camoufox/warnings.rb` | Add leak warnings |
+| Modify | `lib/camoufox/mcp/tools/launch.rb` | Expand MCP launch parameters |
+| Verify | `lib/camoufox/syncSession.js` | Confirm proxy/prefs passthrough |
+| Create | `lib/camoufox/addons.rb` | Addon validation and default addon management |
+| Create | `lib/camoufox/ip.rb` | Public IP detection |
+| Create | `lib/camoufox/locale.rb` | Locale handling |
+| Create | `lib/camoufox/config_validator.rb` | Config key validation against properties.json |
+
+---
+
+## Verification
+
+1. **Unit tests:** Run `bundle exec rspec` — expand `spec/camoufox/native_bridge_spec.rb` to test new parameters
+2. **Manual test:** Launch with `proxy:`, `block_webrtc: true`, `headless: true` and verify behavior
+3. **Config verification:** Use `debug: true` to print CAMOU_CONFIG and verify all properties are present and chunked correctly
+4. **MCP test:** Run `bin/camoufox-mcp` and test the launch tool with new parameters
+5. **Anti-detection test:** Navigate to `https://browserleaks.com/webrtc` and `https://browserleaks.com/canvas` to verify fingerprint properties are applied by the Camoufox binary
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/gaetanjuvin/.REDACTED.jsonl
