@@ -128,7 +128,7 @@ RSpec.describe Camoufox::Fingerprints do
 
       expect(mac_config["fonts"]).to include("Helvetica Neue")
       expect(win_config["fonts"]).to include("Segoe UI")
-      expect(lin_config["fonts"]).to include("DejaVu Sans")
+      expect(lin_config["fonts"]).to include("Noto Sans Devanagari")
     end
   end
 
@@ -193,7 +193,7 @@ RSpec.describe Camoufox::Fingerprints do
 
     it "returns Linux fonts" do
       fonts = described_class.fonts_for_os(:linux)
-      expect(fonts).to include("DejaVu Sans")
+      expect(fonts).to include("Noto Sans Devanagari")
     end
   end
 end

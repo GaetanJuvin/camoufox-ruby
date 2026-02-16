@@ -150,8 +150,13 @@ module Camoufox
     end
 
     def fonts_for_os(target_os)
-      key = target_os.to_s
-      FONT_DATA.fetch(key, FONT_DATA["macos"])
+      key = case target_os
+            when :macos then "mac"
+            when :windows then "win"
+            when :linux then "lin"
+            else "mac"
+            end
+      FONT_DATA.fetch(key, FONT_DATA["mac"])
     end
 
     def generate(options = {})
