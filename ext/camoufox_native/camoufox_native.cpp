@@ -29,6 +29,8 @@ VALUE pkgman_default_executable() {
 }
 
 VALUE fetch_executable_path(VALUE rb_options) {
+  Check_Type(rb_options, T_HASH);
+
   ID executable_id = rb_intern("executable_path");
   VALUE executable_key = ID2SYM(executable_id);
   VALUE explicit_value = rb_hash_lookup(rb_options, executable_key);
@@ -48,43 +50,6 @@ VALUE fetch_executable_path(VALUE rb_options) {
   }
 
   return Qnil;
-}
-
-VALUE build_stub_launch_options(VALUE rb_options) {
-  Check_Type(rb_options, T_HASH);
-  VALUE result = rb_hash_new();
-
-  VALUE executable_key = ID2SYM(rb_intern("executable_path"));
-  VALUE executable_path = fetch_executable_path(rb_options);
-  rb_hash_aset(result, executable_key, executable_path);
-
-  VALUE args = rb_ary_new();
-  rb_hash_aset(result, ID2SYM(rb_intern("args")), args);
-
-  VALUE env = rb_hash_new();
-  rb_hash_aset(env, rb_str_new_cstr("CAMOU_CONFIG_1"), rb_str_new_cstr("{}"));
-  rb_hash_aset(result, ID2SYM(rb_intern("env")), env);
-
-  ID headless_id = rb_intern("headless");
-  VALUE headless_key = ID2SYM(headless_id);
-  VALUE headless_value = rb_hash_lookup(rb_options, headless_key);
-
-  if (NIL_P(headless_value)) {
-    headless_value = Qfalse;
-  } else {
-    headless_value = RTEST(headless_value) ? Qtrue : Qfalse;
-  }
-
-  rb_hash_aset(result, headless_key, headless_value);
-
-  ID user_data_dir_id = rb_intern("user_data_dir");
-  VALUE user_data_dir_key = ID2SYM(user_data_dir_id);
-  VALUE user_data_dir_value = rb_hash_lookup(rb_options, user_data_dir_key);
-  if (!NIL_P(user_data_dir_value)) {
-    rb_hash_aset(result, user_data_dir_key, user_data_dir_value);
-  }
-
-  return result;
 }
 
 VALUE build_cli_response(const char* command) {
@@ -130,8 +95,8 @@ VALUE build_cli_response(const char* command) {
   return rb_str_new_cstr("Unknown command.\n");
 }
 
-VALUE native_launch_options(VALUE self, VALUE rb_options) {
-  return build_stub_launch_options(rb_options);
+VALUE native_executable_path(VALUE self, VALUE rb_options) {
+  return fetch_executable_path(rb_options);
 }
 
 VALUE native_cli(int argc, VALUE* argv, VALUE self) {
@@ -148,6 +113,6 @@ VALUE native_cli(int argc, VALUE* argv, VALUE self) {
 
 extern "C" void Init_camoufox_native() {
   VALUE camoufox_module = rb_define_module("CamoufoxNative");
-  rb_define_module_function(camoufox_module, "launch_options", RUBY_METHOD_FUNC(native_launch_options), 1);
+  rb_define_module_function(camoufox_module, "executable_path", RUBY_METHOD_FUNC(native_executable_path), 1);
   rb_define_module_function(camoufox_module, "run_cli", RUBY_METHOD_FUNC(native_cli), -1);
 }

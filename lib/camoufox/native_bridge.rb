@@ -15,18 +15,28 @@ module Camoufox
       raise MissingNativeExtension, "camoufox_native extension is not available: #{e.message}"
     end
 
-    def launch_options(**kwargs)
+    def resolve_executable_path(explicit_path = nil)
+      return explicit_path if explicit_path
+
       ensure_loaded!
-      options = CamoufoxNative.launch_options(kwargs)
-      if kwargs.key?(:user_data_dir)
-        options = options.dup
-        options[:user_data_dir] = kwargs[:user_data_dir]
-      end
+      CamoufoxNative.executable_path({})
+    end
+
+    def launch_options(**kwargs)
+      executable = resolve_executable_path(kwargs[:executable_path])
 
       # Generate fingerprint config and inject into env
       config = Fingerprints.generate(kwargs)
       config_json = JSON.generate(config)
-      options[:env] = (options[:env] || {}).merge("CAMOU_CONFIG_1" => config_json)
+
+      options = {
+        executable_path: executable,
+        headless: kwargs.fetch(:headless, false),
+        args: kwargs.fetch(:args, []),
+        env: { "CAMOU_CONFIG_1" => config_json },
+      }
+
+      options[:user_data_dir] = kwargs[:user_data_dir] if kwargs.key?(:user_data_dir)
 
       options
     end
