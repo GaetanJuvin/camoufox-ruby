@@ -1,17 +1,8 @@
 # Camoufox Ruby
 
-Camoufox Ruby is a work-in-progress native port of the
-[Camoufox](https://github.com/daijro/camoufox) toolkit. The project is undergoing a full rewrite to
-mirror the package layout of the reference Python implementation (`pythonlib/camoufox`) while keeping
-all logic inside the Ruby gem.
-
-> **Status:** Everything is stubbed. The gem exposes the same module/file structure as the Python
-> package, but most methods simply return placeholder data or emit warnings. Real fingerprint
-> generation, binary management, networking, and Web API spoofing are still to come.
+Ruby port of the [Camoufox](https://github.com/daijro/camoufox) stealth browser toolkit. Launches a fingerprint-spoofed Firefox via Playwright with OS-aware screen, GPU, font, and header profiles.
 
 ## Installation
-
-Add the gem directly from the repository while the native rewrite is underway:
 
 ```ruby
 gem "camoufox"
@@ -19,18 +10,23 @@ gem "camoufox"
 
 ### Prerequisites
 
-- Ruby ≥ 3.0 (development targets 3.4.2)
-- Node.js and `npm` (required by Playwright)
+- Ruby >= 3.0
+- Node.js and `npm`
 
-### Install steps
+### Setup
 
 ```bash
 git clone https://github.com/GaetanJuvin/camoufox-ruby.git
 cd camoufox-ruby
 bundle install
 rake compile
-npx install playwright
 npx playwright install firefox
+```
+
+The Camoufox binary is downloaded automatically on first launch. To install it ahead of time:
+
+```bash
+bundle exec ruby -e 'require "camoufox"; Camoufox::Pkgman.install'
 ```
 
 ## Quick start
@@ -38,155 +34,118 @@ npx playwright install firefox
 ```ruby
 require "camoufox"
 
-driver_dir = ENV.fetch("CAMOUFOX_PLAYWRIGHT_DRIVER_DIR", File.expand_path("node_modules/playwright", __dir__))
-
-Camoufox.configure do |config|
-  config.playwright_driver_dir = driver_dir
-  config.node_path = ENV["CAMOUFOX_NODE_PATH"] if ENV["CAMOUFOX_NODE_PATH"]
-end
-
-Camoufox::SyncAPI::Camoufox.open(headless: true) do |browser|
+Camoufox::SyncAPI::Camoufox.open(headless: false) do |browser|
   page = browser.new_page
   page.goto("https://example.com")
-  page.wait_for_selector('h1')
   puts page.title
-  puts page.content.include?('Example Domain')
 end
 ```
 
-Behind the scenes the Ruby port encodes the Camoufox launch options, hands them to a small Node.js
-bridge, and lets Playwright do the heavy lifting. You must supply a Playwright driver bundle or
-installation so the Node script can `require('playwright')`.
+### Launch options
 
-The synchronous helper keeps a Firefox page alive for the lifetime of the Ruby object, so follow-up
-calls like `wait_for_selector`, `content`, or `title` reuse the same DOM state without re-launching
-the browser for every method. You can also run arbitrary JavaScript in that page via
-`page.evaluate`:
+```ruby
+Camoufox::SyncAPI::Camoufox.open(
+  headless: true,
+  os: :windows,                # Spoof fingerprint for windows, linux, or macos
+  locale: "fr-FR",             # Browser locale
+  proxy: { server: "http://proxy:8080", username: "user", password: "pass" },
+  geoip: true,                 # Match timezone/geolocation to proxy IP
+  block_webrtc: true,          # Prevent WebRTC IP leaks
+  block_webgl: true,           # Disable WebGL fingerprinting
+  block_images: true,          # Block image loading
+  enable_cache: true,          # Enable disk/memory cache
+  user_data_dir: "/tmp/profile", # Persistent Firefox profile
+  addons: ["/path/to/addon"],  # Load Firefox addons
+  firefox_user_prefs: {        # Custom Firefox preferences
+    "dom.webnotifications.enabled" => false,
+  },
+) do |browser|
+  page = browser.new_page
+  page.goto("https://browserleaks.com/javascript")
+  puts page.evaluate("() => navigator.userAgent")
+end
+```
+
+### Evaluate JavaScript
 
 ```ruby
 page.evaluate("() => ({ href: window.location.href, title: document.title })")
-# Variadic arguments are supported – the function receives them individually.
-page.evaluate("(a, b) => `${a} + ${b}`", "1", "2")
+page.evaluate("(a, b) => a + b", 1, 2)
 ```
 
-### Reusing Firefox profiles
+### Persistent profiles
 
-Playwright's `launchPersistentContext` API can now be toggled by passing a `user_data_dir` when
-opening a Camoufox session. The directory stores cookies, history, and other profile data between
-runs, mirroring how Playwright persists Chromium profiles:
+Pass `user_data_dir` to reuse cookies, history, and session data between runs:
 
 ```ruby
-Camoufox::SyncAPI::Camoufox.open(headless: false, user_data_dir: "/tmp/camoufox-profile") do |browser|
+Camoufox::SyncAPI::Camoufox.open(user_data_dir: "/tmp/camoufox-profile") do |browser|
   page = browser.new_page
   page.goto("https://example.com")
-  puts page.title
 end
 ```
 
-When `user_data_dir` is provided the Node bridge launches Firefox through
-`browserType.launchPersistentContext`, so every browser command reuses the same profile directory.
+## MCP server (Claude Code integration)
 
-### Launching the Playwright server (experimental)
+Camoufox ships with an MCP server that lets Claude Code control a stealth browser directly.
 
-To mirror the Python helper that spins up a Playwright websocket endpoint, the Ruby port can invoke
-Playwright's Node driver directly (no `playwright-ruby-client` dependency). You must provide the
-location of a Playwright driver bundle that contains `lib/browserServerImpl.js`.
+### Setup
+
+Create a `.mcp.json` file in your project root:
+
+```json
+{
+  "mcpServers": {
+    "camoufox": {
+      "command": "/path/to/camoufox-ruby/bin/camoufox-mcp-wrapper",
+      "args": []
+    }
+  }
+}
+```
+
+Or if you have the gem in your bundle, create a wrapper script:
 
 ```bash
-export CAMOUFOX_PLAYWRIGHT_DRIVER_DIR=/path/to/playwright/driver/package
-export CAMOUFOX_NODE_PATH=/path/to/node   # optional, defaults to `node`
-bundle exec ruby run.rb server
+#!/usr/bin/env bash
+export PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH"
+cd /path/to/camoufox-ruby
+exec bundle exec ruby bin/camoufox-mcp
 ```
 
-The command prints the websocket endpoint and keeps the process alive, matching the Python
-behaviour. Until the native mapper is complete, the underlying launch options remain stubbed.
+Then point `.mcp.json` at that wrapper.
 
-## Module layout
+### Restart Claude Code
 
-The Ruby sources now mirror the structure of `pythonlib/camoufox`:
+MCP servers are loaded at session start. After creating `.mcp.json`, restart your Claude Code session.
 
-```
-lib/camoufox/
-├── __init__ (lib/camoufox.rb)
-├── __main__.rb
-├── __version__.rb
-├── addons.rb
-├── async_api.rb
-├── browserforge.yml
-├── exceptions.rb
-├── fingerprints.rb
-├── fonts.json
-├── ip.rb
-├── locale.rb
-├── pkgman.rb
-├── server.rb
-├── sync_api.rb
-├── utils.rb
-├── virtdisplay.rb
-├── warnings.rb
-└── webgl/
-```
+### Available MCP tools
 
-Each file defines the corresponding Ruby module, currently implemented as lightweight stubs so that
-call sites can be wired up without crashing.
+| Tool | Description |
+|------|-------------|
+| `camoufox_launch` | Launch browser with fingerprint spoofing, proxy, locale, OS options |
+| `camoufox_goto` | Navigate to a URL |
+| `camoufox_get_content` | Get page HTML |
+| `camoufox_get_title` | Get page title |
+| `camoufox_evaluate` | Execute JavaScript |
+| `camoufox_wait_for_selector` | Wait for a CSS selector |
+| `camoufox_screenshot` | Take a screenshot |
+| `camoufox_close` | Close the browser |
 
-## CLI
+## Environment variables
 
-The `bin/camoufox` executable is available, but commands only return informative placeholder
-messages until the native implementation lands.
-
-```bash
-camoufox version  # => "Camoufox native stub v0.0.1"
-```
-
-The repository also includes a helper script, `run.rb`, with convenience commands:
-
-```bash
-bundle exec ruby run.rb                     # show stub details and launch options
-bundle exec ruby run.rb launch-options --locale en-US --headful
-bundle exec ruby run.rb browse --url https://example.com
-bundle exec ruby run.rb server
-
-# or run the sample script directly
-bundle exec ruby examples/sync_playwright.rb
-```
-
-## Configuration
-
-`Camoufox.configure` exposes a tiny configuration object that is growing alongside the native port.
-Today it supports the basic directories and the Playwright driver configuration:
-
-```ruby
-Camoufox.configure do |config|
-  config.data_dir = "/tmp/camoufox-data"
-  config.node_path = "/usr/local/bin/node"
-  config.playwright_driver_dir = "/opt/playwright-driver/package"
-end
-```
-
-Environment overrides:
-
-- `CAMOUFOX_DATA_DIR` – override where Camoufox assets are stored (planned use)
-- `CAMOUFOX_CACHE_DIR` – override the cache directory (planned use)
-- `CAMOUFOX_EXECUTABLE_PATH` – path to the Camoufox Firefox binary returned by the native stub (defaults to `File.join(Camoufox::Pkgman.install_dir, "camoufox")`, but override it if you place the browser elsewhere)
-- `CAMOUFOX_NODE_PATH` – path to the Node.js binary used when spawning the Playwright server (defaults to `node`)
-- `CAMOUFOX_PLAYWRIGHT_DRIVER_DIR` – directory containing `lib/browserServerImpl.js` (defaults to `node_modules/playwright` if present)
-- `CAMOUFOX_PLAYWRIGHT_JS_REQUIRE` – optional module identifier passed to Node's `require()` when
-  running the synchronous Playwright bridge (defaults to `playwright`)
+| Variable | Description |
+|----------|-------------|
+| `CAMOUFOX_EXECUTABLE_PATH` | Override path to the Camoufox Firefox binary |
+| `CAMOUFOX_CACHE_DIR` | Override the binary install/cache directory |
+| `CAMOUFOX_NODE_PATH` | Path to Node.js binary (defaults to `node`) |
+| `CAMOUFOX_PLAYWRIGHT_DRIVER_DIR` | Playwright driver directory |
 
 ## Testing
 
-Specs intentionally exercise only the pieces that exist today. Run them after compiling the native
-extension:
-
 ```bash
-~/.rbenv/versions/3.4.2/bin/ruby -S bundle exec rspec
+bundle exec rspec
 ```
-
-## Contributing
-
-See `docs/native_port.md` for the roadmap toward feature parity with the Python Camoufox package.
 
 ## License
 
-MIT – see `LICENSE` for details.
+MIT

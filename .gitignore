@@ -32,3 +32,4 @@
 /coverage/
 /log/
 /.env
+.mcp.json
