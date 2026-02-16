@@ -27,8 +27,13 @@ module Camoufox
     def resolve_executable_path(explicit_path = nil)
       return explicit_path if explicit_path
 
-      ensure_loaded!
-      CamoufoxNative.executable_path({})
+      # Check env var
+      env_path = ENV["CAMOUFOX_EXECUTABLE_PATH"]
+      return env_path if env_path && !env_path.empty?
+
+      # Auto-install if needed, then return the installed path
+      Pkgman.ensure_installed!
+      Pkgman.executable_path
     end
 
     def launch_options(
