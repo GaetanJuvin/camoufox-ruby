@@ -89,10 +89,123 @@ module Camoufox
         end
       end
 
-      def screenshot(full_page: false)
+      def screenshot(full_page: false, save_path: nil)
         ensure_open!
-        result = @session.request('screenshot', 'fullPage' => full_page)
-        result['data']
+        params = { 'fullPage' => full_page }
+        params['savePath'] = save_path if save_path
+        result = @session.request('screenshot', params)
+        save_path ? result['saved'] : result['data']
+      end
+
+      def click(selector, **opts)
+        ensure_open!
+        params = { 'selector' => selector }
+        params['button'] = opts[:button] if opts[:button]
+        params['clickCount'] = opts[:click_count] if opts[:click_count]
+        params['timeout'] = opts[:timeout] if opts[:timeout]
+        @session.request('click', params)
+        self
+      end
+
+      def fill(selector, value)
+        ensure_open!
+        @session.request('fill', { 'selector' => selector, 'value' => value })
+        self
+      end
+
+      def type_text(selector, text, delay: nil)
+        ensure_open!
+        params = { 'selector' => selector, 'text' => text }
+        params['delay'] = delay if delay
+        @session.request('type', params)
+        self
+      end
+
+      def select_option(selector, value: nil, label: nil)
+        ensure_open!
+        params = { 'selector' => selector }
+        params['value'] = value if value
+        params['label'] = label if label
+        @session.request('select_option', params)
+        self
+      end
+
+      def press(selector, key)
+        ensure_open!
+        @session.request('press', { 'selector' => selector, 'key' => key })
+        self
+      end
+
+      def hover(selector)
+        ensure_open!
+        @session.request('hover', { 'selector' => selector })
+        self
+      end
+
+      def focus(selector)
+        ensure_open!
+        @session.request('focus', { 'selector' => selector })
+        self
+      end
+
+      def check(selector)
+        ensure_open!
+        @session.request('check', { 'selector' => selector })
+        self
+      end
+
+      def uncheck(selector)
+        ensure_open!
+        @session.request('uncheck', { 'selector' => selector })
+        self
+      end
+
+      def get_url
+        ensure_open!
+        result = @session.request('get_url')
+        result['url']
+      end
+
+      def scroll(selector: nil, x: nil, y: nil)
+        ensure_open!
+        params = {}
+        params['selector'] = selector if selector
+        params['x'] = x if x
+        params['y'] = y if y
+        @session.request('scroll', params)
+        self
+      end
+
+      def mouse_click(x, y, button: 'left')
+        ensure_open!
+        @session.request('mouse_click', { 'x' => x, 'y' => y, 'button' => button })
+        self
+      end
+
+      def frame_evaluate(frame_selector, expression)
+        ensure_open!
+        result = @session.request('frame_evaluate', { 'frameSelector' => frame_selector, 'expression' => expression })
+        result['value']
+      end
+
+      def frame_screenshot(frame_selector, save_path: nil)
+        ensure_open!
+        params = { 'frameSelector' => frame_selector }
+        params['savePath'] = save_path if save_path
+        result = @session.request('frame_screenshot', params)
+        save_path ? result['saved'] : result['data']
+      end
+
+      def frame_click(frame_selector, selector)
+        ensure_open!
+        @session.request('frame_click', { 'frameSelector' => frame_selector, 'selector' => selector })
+        self
+      end
+
+      def frame_check(frame_selector, selector)
+        ensure_open!
+        @session.request('frame_check', { 'frameSelector' => frame_selector, 'selector' => selector })
+        self
       end
 
       def evaluate(expression, *args)

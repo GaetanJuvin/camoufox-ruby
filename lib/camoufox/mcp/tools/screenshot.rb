@@ -13,21 +13,32 @@ module Camoufox
               type: "boolean",
               description: "Capture the full scrollable page instead of just the viewport",
             },
+            save_path: {
+              type: "string",
+              description: "Save screenshot to this file path instead of returning base64",
+            },
           },
         )
 
         class << self
-          def call(server_context:, full_page: false)
+          def call(server_context:, full_page: false, save_path: nil)
             session = server_context[:session]
             session.ensure_ready!
 
-            data = session.page.screenshot(full_page: full_page)
-
-            ::MCP::Tool::Response.new([{
-              type: "image",
-              data: data,
-              mimeType: "image/png",
-            }])
+            if save_path
+              session.page.screenshot(full_page: full_page, save_path: save_path)
+              ::MCP::Tool::Response.new([{
+                type: "text",
+                text: "Screenshot saved to #{save_path}",
+              }])
+            else
+              data = session.page.screenshot(full_page: full_page)
+              ::MCP::Tool::Response.new([{
+                type: "image",
+                data: data,
+                mimeType: "image/png",
+              }])
+            end
           end
         end
       end
