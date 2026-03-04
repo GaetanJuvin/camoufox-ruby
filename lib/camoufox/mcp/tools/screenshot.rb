@@ -34,9 +34,8 @@ module Camoufox
             else
               data = session.page.screenshot(full_page: full_page)
               ::MCP::Tool::Response.new([{
-                type: "image",
-                data: data,
-                mimeType: "image/png",
+                type: "text",
+                text: data,
               }])
             end
           end
